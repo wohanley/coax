@@ -2,5 +2,8 @@
 build/
 cache/
 
+# elm-get
+elm_dependencies/
+
 # Emacs backups
 *~

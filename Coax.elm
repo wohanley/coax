@@ -2,6 +2,8 @@ module Coax where
 
 import Generator(..)
 import Generator.Standard(..)
+import ListUtil as LU
+import Math
 import Touch
 
 type Cell = Float
@@ -32,8 +34,56 @@ init gen {width, height} =
 input : Signal [Touch.Touch]
 input = sampleOn (fps 15) Touch.touches
 
---step : [Touch] -> Game -> Game
---step touches game = 
+step : [Touch.Touch] -> Game -> Game
+step touches game =
+    let grid' = game.grid |> touch touches |> automate
+        gen' = snd (float game.generator)
+    in { game | grid <- grid'
+              , generator <- gen' }
+
+touch : [Touch.Touch] -> Grid -> Grid
+touch touches grid = grid
+
+automate : Grid -> Grid
+automate grid = LU.indexedMap
+    (\rowNumber row -> LU.indexedMap
+        (\columnNumber _ -> stepCell rowNumber columnNumber grid)
+        row)
+    grid
+
+stepCell : Int -> Int -> Grid -> Cell
+stepCell row column grid =
+    let cell = LU.get row grid |> LU.get column
+    in (getNeighbours row column grid)
+        |> foldl (+) 0
+        |> liveOrDie cell
+
+getNeighbours : Int -> Int -> Grid -> [Cell]
+getNeighbours row column grid =
+    let rowCount = length grid
+        colCount = length (LU.get 0 grid)
+    in
+        grid
+            |> LU.getAll (bound (rowCount - 1) row)
+            |> zipWith (<|)
+                   [(LU.getAll (bound (colCount - 1) column)),
+                    (LU.getAll (outerBound (colCount - 1) column)),
+                    (LU.getAll (bound (colCount - 1) column))]
+            |> LU.flatten
+
+bound : Int -> Int -> [Int]
+bound max index =
+    let lower = Math.max 0 (index - 1)
+        upper = Math.min max (index + 1)
+    in
+        LU.range lower (upper + 1)
+
+outerBound : Int -> Int -> [Int]
+outerBound max index = bound max index |> LU.remove index
+
+liveOrDie : Cell -> Float -> Cell
+liveOrDie alive neighbouringLife = 0.5
+
 
 -- Display
 

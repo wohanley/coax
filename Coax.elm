@@ -9,7 +9,6 @@ import Touch
 type Cell = Float
 type Grid = [[Cell]]
 type Dimension = { width: Int, height: Int }
-type Game = { generator: Generator Standard, grid: Grid }
 
 port size: { width: Int, height: Int }
 port randomSeed: Int -- probably the Unix time
@@ -17,29 +16,30 @@ port randomSeed: Int -- probably the Unix time
 cellSize : Int
 cellSize = 5
 
-model : Game
-model = init (generator randomSeed) size
+main : Signal Element
+main = foldp (\(elem, gen) -> \previousElement -> elem) (spacer 0 0) rendered
 
---main : Element
---main = lift (fst . render) (foldp step model input)
+rendered : Signal (Element, Generator Standard)
+rendered = foldp renderWrapper (spacer 0 0, generator randomSeed) gameState
 
-init : Generator Standard -> Dimension -> Game
-init gen {width, height} =
-    { generator = gen,
-      grid = repeat (height `div` cellSize)
-                 (repeat (width `div` cellSize) 0.5) }
+renderWrapper : Grid -> (Element, Generator Standard) ->
+    (Element, Generator Standard)
+renderWrapper grid (_, gen) = render gen grid
+
+gameState : Signal Grid
+gameState = foldp step (initGrid size) (sampleOn (fps 15) Touch.touches)
+
+initGrid : Dimension -> Grid
+initGrid {width, height} = 
+    repeat (height `div` cellSize) (repeat (width `div` cellSize) 0.5)
 
 -- Logic
 
 input : Signal [Touch.Touch]
 input = sampleOn (fps 15) Touch.touches
 
-step : [Touch.Touch] -> Game -> Game
-step touches game =
-    let grid' = game.grid |> touch touches |> automate
-        gen' = snd (float game.generator)
-    in { game | grid <- grid'
-              , generator <- gen' }
+step : [Touch.Touch] -> Grid -> Grid
+step touches = automate . (touch touches)
 
 touch : [Touch.Touch] -> Grid -> Grid
 touch touches grid = grid
@@ -87,10 +87,10 @@ liveOrDie alive neighbouringLife = 0.5
 
 -- Display
 
-render : Game -> (Element, Generator Standard)
-render game =
-    let (randoms, gen') = randomGrid game.generator size -- TODO: smarter size
-        rows = zipWith renderRow randoms game.grid
+render : Generator Standard -> Grid -> (Element, Generator Standard)
+render gen grid =
+    let (randoms, gen') = randomGrid gen size
+        rows = zipWith renderRow randoms grid
     in (flow down rows, gen')
 
 randomGrid : Generator Standard -> Dimension -> ([[Float]], Generator Standard)

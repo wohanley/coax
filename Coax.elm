@@ -5,10 +5,10 @@ import Generator.Standard(..)
 
 type Cell = Float
 type Grid = [[Cell]]
-type Dimension = (Int, Int) -- TODO: use a record
+type Dimension = { width: Int, height: Int }
 type Game = { generator: Generator Standard, grid: Grid }
 
-port size: (Int, Int) -- aka Dimension
+port size: { width: Int, height: Int }
 port randomSeed: Int -- probably the Unix time
 
 cellSize : Int
@@ -24,7 +24,7 @@ main = fst (render model)
 --gameState = foldp (init size) model (every second)
 
 init : Generator Standard -> Dimension -> Game
-init gen (width, height) =
+init gen {width, height} =
     { generator = gen,
       grid = repeat (height `div` cellSize)
                  (repeat (width `div` cellSize) 0.5) }
@@ -38,7 +38,7 @@ render game =
     in (flow down rows, gen')
 
 randomGrid : Generator Standard -> Dimension -> ([[Float]], Generator Standard)
-randomGrid gen size = listOf (listOf float (fst size)) (snd size) gen
+randomGrid gen size = listOf (listOf float size.width) (size.height) gen
 
 renderRow : [Float] -> [Cell] -> Element
 renderRow randoms row = zipWith renderCell randoms row |> flow right

@@ -9,14 +9,14 @@ type Dimension = (Int, Int)
 
 type Game = { generator: Generator Standard, grid: Grid }
 
---port size: (Int, Int) -- aka Dimension
---port randomSeed: Int -- probably the Unix time
+port size: (Int, Int) -- aka Dimension
+port randomSeed: Int -- probably the Unix time
 
 cellSize : Int
-cellSize = 3
+cellSize = 5
 
 model : Game
-model = init (generator 0 {- randomSeed -}) {-size-}(50, 50)
+model = init (generator randomSeed) size
 
 main : Element
 main = fst (render model)
@@ -27,7 +27,8 @@ main = fst (render model)
 init : Generator Standard -> Dimension -> Game
 init gen (width, height) =
     { generator = gen,
-      grid = repeat height (repeat width 0) }
+      grid = repeat (height `div` cellSize)
+                 (repeat (width `div` cellSize) 0.5) }
 
 render : Game -> (Element, Generator Standard)
 render game =

@@ -5,8 +5,7 @@ import Generator.Standard(..)
 
 type Cell = Float
 type Grid = [[Cell]]
-type Dimension = (Int, Int)
-
+type Dimension = (Int, Int) -- TODO: use a record
 type Game = { generator: Generator Standard, grid: Grid }
 
 port size: (Int, Int) -- aka Dimension
@@ -30,22 +29,24 @@ init gen (width, height) =
       grid = repeat (height `div` cellSize)
                  (repeat (width `div` cellSize) 0.5) }
 
+-- Display
+
 render : Game -> (Element, Generator Standard)
 render game =
-    let rows = map (renderRow game.generator) game.grid
-    in (flow down (map fst rows), snd (last rows))
+    let (randoms, gen') = randomGrid game.generator size -- TODO: smarter size
+        rows = zipWith renderRow randoms game.grid
+    in (flow down rows, gen')
 
-renderRow : Generator Standard -> [Cell] -> (Element, Generator Standard)
-renderRow gen row =
-    let cells = map (renderCell gen) row
-    in (flow right (map fst cells), (snd (last cells)))
+randomGrid : Generator Standard -> Dimension -> ([[Float]], Generator Standard)
+randomGrid gen size = listOf (listOf float (fst size)) (snd size) gen
 
-renderCell : Generator Standard -> Cell -> (Element, Generator Standard)
-renderCell gen cell =
-    let (randomColor, gen') = cellColor gen cell
-    in ((color randomColor (spacer cellSize cellSize)), gen')
+renderRow : [Float] -> [Cell] -> Element
+renderRow randoms row = zipWith renderCell randoms row |> flow right
 
-cellColor : Generator Standard -> Cell -> (Color, Generator Standard)
-cellColor gen cell =
-    let (random, gen') = float gen
-    in ((if random < cell then black else white), gen')
+renderCell : Float -> Cell -> Element
+renderCell random cell =
+    color (cellColor random cell) (spacer cellSize cellSize)
+
+cellColor : Float -> Cell -> Color
+cellColor random cell =
+    if random < cell then black else white
